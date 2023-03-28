@@ -42,7 +42,7 @@ def get_actions():
         for line in f.readlines():
             id, dur, action = parse_line(line)
             mapping.append((id, int(action), int(dur)))
-    df = pd.DataFrame.from_records(mapping, columns=['id', 'action', 'dur'])
+    # df = pd.DataFrame.from_records(mapping, columns=['id', 'action', 'dur'])
     # bx = df.boxplot(by=['action'])
     # plt.show()
 

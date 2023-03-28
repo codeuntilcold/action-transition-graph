@@ -110,7 +110,8 @@ def main():
             plt.clf()
             pos = nx.spring_layout(G, seed=42)
             nx.draw(G, pos, 
-                    node_color=["r" if n == current_state else "w" for n in G.nodes()], 
+                    node_color=[
+                        "r" if n == bone.current_state else "w" for n in G.nodes()], 
                     width=2, 
                     with_labels=True,
                     edgelist=edges,
