@@ -55,7 +55,7 @@ def get_actions():
                         file.write("%d %f\n" % (action, random.uniform(0.5, 1.0)))
                     else:
                         random_content = "%d %f\n" % (random.randint(0, 10),
-                                                      random.uniform(0.5, 0.7))
+                                                      random.uniform(0.3, 0.4))
                         file.write(random_content)
 
 
