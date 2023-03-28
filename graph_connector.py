@@ -21,3 +21,4 @@ if __name__ == '__main__':
     for message in read_sim_file():
         connector.send(message)
         sleep(1 / 30.0)
+    connector.close()

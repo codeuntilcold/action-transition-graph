@@ -30,7 +30,6 @@ G = nx.from_pandas_edgelist(pd.read_csv('trans.txt', sep=' '),
                             create_using=nx.DiGraph())
 
 
-
 class TransitionGraph:
     def __init__(self, stream):
         self.action_stream = stream
@@ -40,8 +39,6 @@ class TransitionGraph:
         try:
             new_state, confidence = next(self.action_stream)
             new_state, confidence = int(new_state), float(confidence)
-        except StopIteration:
-            return False
         except Exception:
             logging.error("Invalid value, stopping stream...", exc_info=True)
             return False
@@ -50,22 +47,41 @@ class TransitionGraph:
                                     { 'prob': EDGE_NOT_EXIST })['prob']
         trans_prob *= confidence
 
-        if self.current_state is None:
-            logging.info(f"\t\t[{new_state}] {ACTIONS[new_state]} 💵")
-            self.current_state = new_state
-        elif self.current_state == new_state:
-            pass
-        elif trans_prob > MIN_TRANS_PROB:
-            logging.info(f"({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]} 💵")
-            self.current_state = new_state
-        elif trans_prob <= MIN_TRANS_PROB:
-            # logging.info(f"({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]}")
-            # self.current_state = new_state
-            pass
-        else:
-            logging.error("Invalid input.")
-        
+        if self.current_state != new_state:
+            if self.current_state is None:
+                logging.info("=== START NEW ACTION")
+                logging.info(f"\t\t[{new_state}] {ACTIONS[new_state]} 💵")
+                self.current_state = new_state
+            elif trans_prob > MIN_TRANS_PROB:
+                logging.info(f"({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]} 💵")
+                self.current_state = new_state
+            else:
+                # logging.info(f"({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]}")
+                # self.current_state = new_state
+                pass
+
         return True
+
+
+class ModelConnector:
+    def __init__(self, graph_port=24000):
+        self.serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.serversocket.bind((socket.gethostname(), graph_port))
+        self.serversocket.listen(5)
+        self.clientsocket, self.addr = self.serversocket.accept()
+        logging.info(f"Connection from {self.addr} has been established!")
+    
+    def get_stream_gen(self):
+        while True:
+            data = self.clientsocket.recv(1024).decode()
+            if not data:
+                break
+            logging.debug(f"Received data: {data} from {self.addr}")
+            yield data.split()
+    
+    def close(self):
+        self.clientsocket.close()
+        self.serversocket.close()
 
 
 def notify():
@@ -81,30 +97,12 @@ def notify():
 
 
 def main():
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = socket.gethostname()
-    port = 24000
-    serversocket.bind((host, port))
-    serversocket.listen(5)
-
-    # Wait for a client connection
-    clientsocket, addr = serversocket.accept()
-    logging.info(f"Connection from {addr} has been established!")
-
-    def gen():
-        while True:
-            # Receive data from the client
-            data = clientsocket.recv(1024).decode()
-            if not data:
-                break
-            logging.debug(f"Received data: {data} from {addr}")
-            yield data.split()
-
+    connector = ModelConnector()
     st = time()
+    bone = TransitionGraph(connector.get_stream_gen())
 
-    bone = TransitionGraph(gen())
-
-    while bone.update_state():    
+    while bone.update_state():
+        # visualize transition graph, very slow
         if False:
             edges,weights = zip(*nx.get_edge_attributes(G,'prob').items())
             plt.clf()
@@ -118,13 +116,13 @@ def main():
                     edge_color=weights, 
                     edge_cmap=plt.cm.Blues)
             plt.pause(1 / 64)
+
     plt.close()
-
     et = time()
-
-    clientsocket.close()
+    connector.close()
 
     logging.info(f"=== Total elapsed time is {et - st:3f}")
+
 
 if __name__ == "__main__":
     main()
