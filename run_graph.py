@@ -1,4 +1,3 @@
-from time import time
 import matplotlib.pyplot as plt
 import networkx as nx
 import pandas as pd
@@ -6,7 +5,8 @@ import socket
 import logging
 
 logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(message)s')
+                    format='%(asctime)s - %(message)s',
+                    datefmt="%y-%m-%d %H:%M:%S")
 
 ACTIONS = [
     "open phone box",
@@ -40,11 +40,16 @@ class TransitionGraph:
         try:
             new_state, confidence = next(self.action_stream)
             new_state, confidence = int(new_state), float(confidence)
-        except Exception:
-            # logging.error("Invalid value, stopping stream...", exc_info=True)
-            # return False
+        except ValueError:
             logging.info("=== END OF ACTION ===")
             self.current_state = None
+            return True
+        except Exception:
+            logging.error("Stop updating state...")
+            return False
+        
+        if new_state not in range(len(ACTIONS)):
+            logging.info(f"Ignore invalid state {new_state}")
             return True
 
         trans_prob = G.get_edge_data(self.current_state, new_state, 
@@ -57,13 +62,13 @@ class TransitionGraph:
                 logging.info(f"\t\t[{new_state}] {ACTIONS[new_state]}")
                 self.current_state = new_state
             elif trans_prob > MIN_TRANS_PROB:
-                logging.info(f"({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]}")
+                logging.info(f"({trans_prob:3f})\t[{new_state}] {ACTIONS[new_state]}")
                 self.current_state = new_state
             else:
                 RED='\033[0;31m'
                 NC='\033[0m' # No Color
-                logging.info(f"{RED}({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]}{NC}")
-                self.current_state = new_state
+                logging.info(f"{RED}({trans_prob:3f})\t[{new_state}] {ACTIONS[new_state]}{NC}")
+                # self.current_state = new_state
                 # pass
 
         self.previous_conf = confidence
@@ -75,25 +80,32 @@ class ModelConnector:
         self.serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serversocket.bind((socket.gethostname(), graph_port))
         self.serversocket.listen(5)
+        self.clientsocket = None
     
     def get_stream_gen(self):
         while True:
-            self.clientsocket, self.addr = self.serversocket.accept()
-            logging.info(f"Connection from {self.addr} has been established!")
+            # accept new client
+            if input("Accept new client? [y/n] ").lower() == 'n':
+                break
+            
+            logging.info("Waiting for new client")
+
+            # blocking operation
+            self.clientsocket, addr = self.serversocket.accept()
+            logging.info(f"Connection from {addr}")
+
             while True:
                 data = self.clientsocket.recv(1024).decode()
                 if not data:
                     yield "invalid data"
                     break
-                logging.debug(f"Received data: {data} from {self.addr}")
+                logging.debug(f"Received data: {data} from {addr}")
                 yield data.split()
 
-            self.clientsocket.close()
-            # TODO: How to exit this loop
-    
     def close(self):
         # Extra cleanup
-        self.clientsocket.close()
+        if self.clientsocket:
+            self.clientsocket.close()
         self.serversocket.close()
 
 
@@ -111,7 +123,6 @@ def notify():
 
 def main():
     connector = ModelConnector()
-    st = time()
     bone = TransitionGraph(connector.get_stream_gen())
 
     while bone.update_state():
@@ -130,12 +141,7 @@ def main():
                     edge_cmap=plt.cm.Blues)
             plt.pause(1 / 64)
 
-    plt.close()
-    et = time()
     connector.close()
-
-    logging.info(f"=== Total elapsed time is {et - st:3f}")
-
 
 if __name__ == "__main__":
     main()
