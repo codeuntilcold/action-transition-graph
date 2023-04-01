@@ -34,32 +34,39 @@ class TransitionGraph:
     def __init__(self, stream):
         self.action_stream = stream
         self.current_state = None
+        self.previous_conf = 0.01
 
     def update_state(self):
         try:
             new_state, confidence = next(self.action_stream)
             new_state, confidence = int(new_state), float(confidence)
         except Exception:
-            logging.error("Invalid value, stopping stream...", exc_info=True)
-            return False
+            # logging.error("Invalid value, stopping stream...", exc_info=True)
+            # return False
+            logging.info("=== END OF ACTION ===")
+            self.current_state = None
+            return True
 
         trans_prob = G.get_edge_data(self.current_state, new_state, 
                                     { 'prob': EDGE_NOT_EXIST })['prob']
-        trans_prob *= confidence
+        trans_prob *= self.previous_conf
 
         if self.current_state != new_state:
             if self.current_state is None:
-                logging.info("=== START NEW ACTION")
-                logging.info(f"\t\t[{new_state}] {ACTIONS[new_state]} 💵")
+                logging.info("=== START NEW ACTION ===")
+                logging.info(f"\t\t[{new_state}] {ACTIONS[new_state]}")
                 self.current_state = new_state
             elif trans_prob > MIN_TRANS_PROB:
-                logging.info(f"({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]} 💵")
+                logging.info(f"({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]}")
                 self.current_state = new_state
             else:
-                # logging.info(f"({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]}")
-                # self.current_state = new_state
-                pass
+                RED='\033[0;31m'
+                NC='\033[0m' # No Color
+                logging.info(f"{RED}({trans_prob:3f}) ➡️  [{new_state}] {ACTIONS[new_state]}{NC}")
+                self.current_state = new_state
+                # pass
 
+        self.previous_conf = confidence
         return True
 
 
@@ -68,18 +75,24 @@ class ModelConnector:
         self.serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serversocket.bind((socket.gethostname(), graph_port))
         self.serversocket.listen(5)
-        self.clientsocket, self.addr = self.serversocket.accept()
-        logging.info(f"Connection from {self.addr} has been established!")
     
     def get_stream_gen(self):
         while True:
-            data = self.clientsocket.recv(1024).decode()
-            if not data:
-                break
-            logging.debug(f"Received data: {data} from {self.addr}")
-            yield data.split()
+            self.clientsocket, self.addr = self.serversocket.accept()
+            logging.info(f"Connection from {self.addr} has been established!")
+            while True:
+                data = self.clientsocket.recv(1024).decode()
+                if not data:
+                    yield "invalid data"
+                    break
+                logging.debug(f"Received data: {data} from {self.addr}")
+                yield data.split()
+
+            self.clientsocket.close()
+            # TODO: How to exit this loop
     
     def close(self):
+        # Extra cleanup
         self.clientsocket.close()
         self.serversocket.close()
 
