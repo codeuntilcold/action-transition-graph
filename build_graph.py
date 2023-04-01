@@ -4,9 +4,11 @@ import random
 import networkx as nx
 import matplotlib.pyplot as plt
 
+
 def parse_line(str):
     elems = str.split(" ")
     return elems[0], elems[-2], elems[-1].strip()
+
 
 def get_transitional_prob():
     with open('all_labels.txt') as f:
@@ -21,20 +23,22 @@ def get_transitional_prob():
 
         unique_mapping = np.unique(mapping, return_counts=True, axis=0)
 
-        df = pd.DataFrame.from_records(unique_mapping[0], columns=['from', 'to'])
+        df = pd.DataFrame.from_records(
+            unique_mapping[0], columns=['from', 'to'])
         df['freq'] = unique_mapping[1]
         # print(df)
-        
-        
+
         sum_per_action = df.groupby(['from'])['freq'].sum()
 
         # # visualize
         # for row in df.itertuples():
         #     print(row[1], row[2], "|"*int(row[3]))
-        
+
         print(' '.join(df.columns.values), 'prob')
         for row in df.itertuples():
-            print(row[1], row[2], row[3], '%f' % (row[3] / sum_per_action[row[1]]))
+            print(row[1], row[2], row[3], '%f' %
+                  (row[3] / sum_per_action[row[1]]))
+
 
 def get_actions():
     mapping = []
@@ -50,9 +54,10 @@ def get_actions():
         for id, action, dur in mapping:
             if id == '8_4_1_20221105':
                 for _ in range(dur):
-                    noise = 1# random.randint(0, 19)
+                    noise = random.randint(0, 5)
                     if noise != 0:
-                        file.write("%d %f\n" % (action, random.uniform(0.5, 1.0)))
+                        file.write("%d %f\n" %
+                                   (action, random.uniform(0.5, 1.0)))
                     else:
                         random_content = "%d %f\n" % (random.randint(0, 10),
                                                       random.uniform(0.3, 0.4))
@@ -73,12 +78,12 @@ def draw():
         9: "put in phone",
         10: "close phone box"
     }
-    
+
     trans = pd.read_csv('trans.txt', sep=' ')
-    G = nx.from_pandas_edgelist(trans.sort_values(by=['prob']), 
-                                source='from', target='to', edge_attr='prob', 
+    G = nx.from_pandas_edgelist(trans.sort_values(by=['prob']),
+                                source='from', target='to', edge_attr='prob',
                                 create_using=nx.DiGraph())
-    edges,weights = zip(*nx.get_edge_attributes(G,'prob').items())
+    edges, weights = zip(*nx.get_edge_attributes(G, 'prob').items())
     pos = {
         0: (0, 0),
         1: (1, 0),
@@ -92,26 +97,37 @@ def draw():
         9: (9, -1),
         10: (10, -1)
     }
+    edge_weights = [G[u][v]['prob'] for u, v in G.edges()]
+    max_weight = max(edge_weights)
+    line_widths = [5 * (float(weight) / max_weight) for weight in edge_weights]
+    edge_width_dict = dict(zip(G.edges(), line_widths))
+
     nx.draw_networkx_nodes(G, pos=pos, node_color='w')
-    nx.draw_networkx_edges(G, pos=pos, width=5, 
-                                  edge_color=weights,
-                                  edge_cmap=plt.cm.Blues,
-                                  connectionstyle="arc3,rad=0.5")
+    nx.draw_networkx_edges(G, pos, width=line_widths,
+                           edge_color='b', edge_cmap=plt.cm.Blues,
+                           alpha=0.7, edge_vmin=min(line_widths),
+                           edge_vmax=max(line_widths),
+                           connectionstyle="arc3,rad=0.5")
+
+    # nx.draw_networkx_edges(G, pos=pos, width=5,
+    #                               edge_color=weights,
+    #                               edge_cmap=plt.cm.Blues,
+    #                               connectionstyle="arc3,rad=0.5")
     nx.draw_networkx_labels(G, pos=pos)
+
     # nx.draw(G, pos,
-    #         node_color=[ "w" for n in G.nodes()], 
+    #         node_color=[ "w" for n in G.nodes()],
     #         labels=ACTIONS,
-    #         width=2, 
+    #         width=2,
     #         with_labels=True,
     #         edgelist=edges,
-    #         edge_color=weights, 
+    #         edge_color=weights,
     #         edge_cmap=plt.cm.Blues
     #         )
-    plt.show()                         
-
+    plt.show()
 
 
 if __name__ == '__main__':
-    # get_actions()
+    get_actions()
     # get_transitional_prob()
-    draw()
+    # draw()
