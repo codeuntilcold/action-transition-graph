@@ -40,7 +40,7 @@ def get_transitional_prob():
                   (row[3] / sum_per_action[row[1]]))
 
 
-def get_actions():
+def write_simulated_action_stream():
     mapping = []
     with open('all_labels.txt') as f:
         for line in f.readlines():
@@ -59,12 +59,12 @@ def get_actions():
                         file.write("%d %f\n" %
                                    (action, random.uniform(0.5, 1.0)))
                     else:
-                        random_content = "%d %f\n" % (random.randint(0, 10),
+                        random_content = "%d %f\n" % (random.randint(action, action + 5) if action < 5 else random.randint(action - 5, action),
                                                       random.uniform(0.3, 0.4))
                         file.write(random_content)
 
 
-def draw():
+def draw_transition_graph():
     ACTIONS = {
         0: "open phone box",
         1: "take out phone",
@@ -127,7 +127,36 @@ def draw():
     plt.show()
 
 
+def plot_smoothed_labels():
+    smoothed = []
+    with open("smoothed_labels.txt", "r") as f:
+        for line in f:
+            smoothed.append(int(line.strip()))
+    raw = []
+    with open("sim_8_4_1_20221105.txt", "r") as f:
+        for line in f:
+            raw.append(int(line.strip().split()[0]))
+    raw = raw[:-2]
+
+    x = list(range(len(smoothed)))
+    plt.plot(x, smoothed, 'b', linewidth=3, label='smoothed')
+    plt.plot(x, raw, '#00ff00', label='raw (simulated)')
+
+    # Add a legend
+    plt.legend()
+
+    # Add axis labels and title
+    plt.xlabel('frame (30fps)')
+    plt.ylabel('label')
+    plt.title('Simulated noisy raw frames vs. smoothed frames')
+
+    # Show the plot
+    plt.show()
+
+
 if __name__ == '__main__':
-    get_actions()
-    # get_transitional_prob()
-    # draw()
+    what = input("Choose what function to run pls: ")
+    if what == '1': write_simulated_action_stream()
+    elif what == '2': get_transitional_prob()
+    elif what == '3': draw_transition_graph()
+    else: plot_smoothed_labels()

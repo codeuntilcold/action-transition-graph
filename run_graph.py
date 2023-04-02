@@ -142,7 +142,7 @@ def notify():
 
 def main():
     connector = ModelConnector()
-    bucket = Bucket(stream=connector.get_stream_gen())
+    bucket = Bucket(stream=connector.get_stream_gen(), radius=5)
     bone = TransitionGraph()
 
     while True:
