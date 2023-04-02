@@ -25,6 +25,7 @@ ACTIONS = [
     "close phone box",
     "no action"
 ]
+NO_ACTION_LABEL = len(ACTIONS) - 1
 EDGE_NOT_EXIST = 0.01
 MIN_TRANS_PROB = 0.01
 DEFAULT_CONF = 0.5
@@ -32,6 +33,10 @@ G = nx.from_pandas_edgelist(pd.read_csv('trans.txt', sep=' '),
                             source='from', target='to', edge_attr='prob',
                             create_using=nx.DiGraph())
 
+
+class ClientDisconnected(Exception):
+    pass
+    
 
 class ModelConnector:
     def __init__(self, graph_port=24000):
@@ -51,10 +56,11 @@ class ModelConnector:
             while True:
                 data = self.clientsocket.recv(1024).decode()
                 if not data:
-                    yield "invalid data"
+                    logging.info(f"Connection from {addr} closed...")
+                    yield False, ClientDisconnected
                     break
                 logging.debug(f"Received data: {data} from {addr}")
-                yield data.split()
+                yield True, data
 
     def close(self):
         # Extra cleanup
@@ -69,22 +75,29 @@ class Bucket:
         # [0    1   2   3   4   5   6   7]
         self.stream = stream
         self.radius = radius
-        self.bucket = list([None] * (2 * radius + 1))
+        self.bucket = list([NO_ACTION_LABEL] * (2 * radius + 1))
         self.conf = list([DEFAULT_CONF] * (2 * radius + 1))
 
     def fill(self):
         try:
-            new_state, confidence = next(self.stream)
+            ok, data = next(self.stream)
+            if not ok:
+                raise data
+            new_state, confidence = data.split()
             new_state, confidence = int(new_state), float(confidence)
         except ValueError:
-            new_state, confidence = None, DEFAULT_CONF
+            # in case state or confidence is malformed
+            new_state, confidence = NO_ACTION_LABEL, DEFAULT_CONF
         except Exception as e:
+            # stop iteration, keyboard interupt, etc
             raise e
 
         if new_state not in range(len(ACTIONS)):
-            logging.info(f"Ignore invalid state {new_state}")
-        else:
-            self.bucket = self.bucket[1:] + [new_state]
+            logging.warn(
+                f"Invalid state {new_state}, default to [{NO_ACTION_LABEL}] {ACTIONS[NO_ACTION_LABEL]}")
+            new_state = NO_ACTION_LABEL
+        self.bucket = self.bucket[1:] + [new_state]
+        self.conf = self.conf[1:] + [confidence]
 
     def get_mode(self):
         return statistics.multimode(self.bucket)[-1]
@@ -96,36 +109,45 @@ class Bucket:
         return self.conf[self.radius]
 
     def drip(self):
-        self.fill()
-        return self.get_mode(), self.get_prev_conf(), self.get_conf()
+        try:
+            self.fill()
+            return self.get_mode(), self.get_prev_conf(), self.get_conf()
+        except Exception as e:
+            raise e
+
+    def flush(self):
+        self.bucket = [NO_ACTION_LABEL for _ in self.bucket]
+        self.conf = [DEFAULT_CONF for _ in self.conf]
+
 
 
 class TransitionGraph:
     def __init__(self):
-        self.current_state = None
+        self.current_state = NO_ACTION_LABEL
 
     def update_state(self, new_state, confidence):
+        if self.current_state == new_state:
+            return
+
         trans_prob = G.get_edge_data(self.current_state, new_state,
                                      {'prob': EDGE_NOT_EXIST})['prob']
         trans_prob *= confidence
 
-        if self.current_state != new_state:
-            if self.current_state is None:
-                logging.info("=== START NEW ACTION ===")
-                logging.info(f"\t\t[{new_state}] {ACTIONS[new_state]}")
-            elif new_state is None:
-                logging.info("===  END OF ACTION   ===")
-            elif trans_prob > MIN_TRANS_PROB:
-                logging.info(
-                    f"({trans_prob:3f})\t[{new_state}] {ACTIONS[new_state]}")
-            else:
-                # still take mistake actions into account
-                logging.info(
-                    f"{RED}({trans_prob:3f})\t[{new_state}] {ACTIONS[new_state]}{NC}")
+        state_and_label = f"[{new_state}] {ACTIONS[new_state]}"
+        if self.current_state == NO_ACTION_LABEL:
+            logging.info("=== START NEW ACTION ===")
+            logging.info(f"\t\t{state_and_label}")
+        elif new_state == NO_ACTION_LABEL:
+            logging.info("===  END OF ACTION   ===")
+        elif trans_prob > MIN_TRANS_PROB:
+            logging.info(f"({trans_prob:3f})\t{state_and_label}")
+        else:
+            logging.info(f"{RED}({trans_prob:3f})\t{state_and_label}{NC}")
 
-            self.current_state = new_state
-
-        return True
+        self.current_state = new_state
+    
+    def reset_state(self):
+        self.current_state = NO_ACTION_LABEL
 
 
 def notify():
@@ -146,9 +168,16 @@ def main():
     bone = TransitionGraph()
 
     while True:
-        new_state, prev_conf, conf = bucket.drip()
-        continue_process = bone.update_state(new_state, prev_conf)
-        if not continue_process:
+        try:
+            new_state, prev_conf, conf = bucket.drip()
+            bone.update_state(new_state, prev_conf)
+        except ClientDisconnected:
+            logging.warning("Reset state")
+            bone.reset_state()
+            bucket.flush()
+            continue
+        except Exception:
+            logging.error("Shut down everything")
             break
 
         # visualize transition graph, very slow
