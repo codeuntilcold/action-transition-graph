@@ -10,6 +10,18 @@ def parse_line(str):
     return elems[0], elems[-2], elems[-1].strip()
 
 
+def print_data_stats(filename):
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+        actions = []
+        for line in lines:
+            _, _, action = parse_line(line)
+            actions.append(int(action))
+        labels = np.unique(actions, return_counts=True)
+        print("Sliding 32+64_16_16: action_id and count")
+        for i in range(12):
+            print(labels[0][i], labels[1][i])
+
 def get_transitional_prob():
     with open('all_labels.txt') as f:
         line = f.readlines()
@@ -159,4 +171,5 @@ if __name__ == '__main__':
     if what == '1': write_simulated_action_stream()
     elif what == '2': get_transitional_prob()
     elif what == '3': draw_transition_graph()
-    else: plot_smoothed_labels()
+    elif what == '4': plot_smoothed_labels()
+    else: print_data_stats('all_labels_sliding.txt')
