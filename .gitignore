@@ -1,3 +1,6 @@
 .vscode/
 original_labels/
 smoothed_labels.txt
+venv/
+report/
+__pycache__/

@@ -33,7 +33,7 @@ END_ACTION_LABEL = 10
 EDGE_NOT_EXIST = 0.01
 MIN_TRANS_PROB = 0.01
 DEFAULT_CONF = 0.5
-G = nx.from_pandas_edgelist(pd.read_csv('trans.txt', sep=' '),
+G = nx.from_pandas_edgelist(pd.read_csv('data/trans.txt', sep=' '),
                             source='from', target='to', edge_attr='prob',
                             create_using=nx.DiGraph())
 
@@ -224,18 +224,6 @@ class TransitionGraph:
         self.current_state = NO_ACTION_LABEL
         self.report.save()
         self.report.clear()
-
-
-def notify():
-    pass
-    # score at time t+
-    # = 0 if an action is occuring
-    # = 1 * A if it is transitioning
-    # = -1 * A if both is starting/ending
-
-    # A
-    # = C(label at t+, missing action between t and t+)
-    # = cost of performing the missing action after later action
 
 
 def main():

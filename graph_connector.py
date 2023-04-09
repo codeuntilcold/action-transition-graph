@@ -1,6 +1,7 @@
 import socket
 from time import sleep
 
+
 class GraphConnector:
     def __init__(self, graph_port=24000):
         self.clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -12,9 +13,11 @@ class GraphConnector:
     def close(self):
         self.clientsocket.close()
 
+
 def read_sim_file():
-    for line in open('sim_8_4_1_20221105.txt', 'r'):
+    for line in open('data/sim_8_4_1_20221105.txt', 'r'):
         yield line
+
 
 if __name__ == '__main__':
     connector = GraphConnector()

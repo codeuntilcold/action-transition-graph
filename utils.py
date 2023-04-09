@@ -22,8 +22,9 @@ def print_data_stats(filename):
         for i in range(12):
             print(labels[0][i], labels[1][i])
 
+
 def get_transitional_prob():
-    with open('all_labels.txt') as f:
+    with open('data/all_labels.txt') as f:
         line = f.readlines()
         total_samples = len(line)
         mapping = []
@@ -54,7 +55,7 @@ def get_transitional_prob():
 
 def write_simulated_action_stream():
     mapping = []
-    with open('all_labels.txt') as f:
+    with open('data/all_labels.txt') as f:
         for line in f.readlines():
             id, dur, action = parse_line(line)
             mapping.append((id, int(action), int(dur)))
@@ -62,7 +63,7 @@ def write_simulated_action_stream():
     # bx = df.boxplot(by=['action'])
     # plt.show()
 
-    with open('sim_8_4_1_20221105.txt', 'w') as file:
+    with open('data/sim_8_4_1_20221105.txt', 'w') as file:
         for id, action, dur in mapping:
             if id == '8_4_1_20221105':
                 for _ in range(dur):
@@ -91,7 +92,7 @@ def draw_transition_graph():
         10: "close phone box"
     }
 
-    trans = pd.read_csv('trans.txt', sep=' ')
+    trans = pd.read_csv('data/trans.txt', sep=' ')
     G = nx.from_pandas_edgelist(trans.sort_values(by=['prob']),
                                 source='from', target='to', edge_attr='prob',
                                 create_using=nx.DiGraph())
@@ -141,11 +142,11 @@ def draw_transition_graph():
 
 def plot_smoothed_labels():
     smoothed = []
-    with open("smoothed_labels.txt", "r") as f:
+    with open("data/smoothed_labels.txt", "r") as f:
         for line in f:
             smoothed.append(int(line.strip()))
     raw = []
-    with open("sim_8_4_1_20221105.txt", "r") as f:
+    with open("data/sim_8_4_1_20221105.txt", "r") as f:
         for line in f:
             raw.append(int(line.strip().split()[0]))
     raw = raw[:-2]
@@ -172,4 +173,4 @@ if __name__ == '__main__':
     elif what == '2': get_transitional_prob()
     elif what == '3': draw_transition_graph()
     elif what == '4': plot_smoothed_labels()
-    else: print_data_stats('all_labels_sliding.txt')
+    else: print_data_stats('data/all_labels_sliding.txt')
