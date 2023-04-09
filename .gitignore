@@ -4,3 +4,4 @@ smoothed_labels.txt
 venv/
 report/
 __pycache__/
+.env
