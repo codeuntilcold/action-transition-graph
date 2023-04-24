@@ -4,7 +4,7 @@ from time import time
 import networkx as nx
 import logging
 
-from report import ActionReport, AssemblyReport
+from report import AssemblyReport
 
 RED = '\033[0;31m'
 NC = '\033[0m'
@@ -57,8 +57,7 @@ class Bucket:
 
         if new_state not in range(len(ACTIONS)):
             logging.warn(
-                f"Invalid state {new_state}, default to [{NO_ACTION_LABEL}] \
-                    {ACTIONS[NO_ACTION_LABEL]}")
+                f"Invalid state {new_state}, default to [{NO_ACTION_LABEL}] {ACTIONS[NO_ACTION_LABEL]}")
             new_state = NO_ACTION_LABEL
 
         self.bucket = self.bucket[1:] + [new_state]
@@ -103,7 +102,7 @@ class TransitionGraph:
         if self.current_state == NO_ACTION_LABEL:
             logging.info(f"Start action: {state_and_label}")
             # TODO: How to determine whether this is a mistake
-            self.report.add(ActionReport(new_state, current_time))
+            self.report.add(new_state, current_time)
 
         elif new_state == NO_ACTION_LABEL:
             logging.info("Stop action")
@@ -116,13 +115,13 @@ class TransitionGraph:
             logging.info(f"({trans_prob:3f})\t{state_and_label}")
             self.report.last().set_endtime(current_time)
             # TODO: End time and start time collide
-            self.report.add(ActionReport(new_state, current_time))
+            self.report.add(new_state, current_time)
 
         else:
             logging.info(f"{RED}({trans_prob:3f})\t{state_and_label}{NC}")
             self.report.last().set_endtime(current_time)
             # TODO: End time and start time collide
-            self.report.add(ActionReport(new_state, current_time))
+            self.report.add(new_state, current_time)
             self.report.last().toggle_mistake()
 
         self.current_state = new_state
