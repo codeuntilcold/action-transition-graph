@@ -41,28 +41,27 @@ def gen_random_id():
 
 
 class AssemblyReport:
-    def __init__(self, save_as_file=True):
+    def __init__(self, topic='worker-0', save_as_file=True):
         self.id = gen_random_id()
         self.report: list[ActionReport] = list()
-        if not save_as_file:
-            self.kafka = KafkaConnector(topic='worker-0')
+        self.kafka = None if save_as_file else KafkaConnector(topic)
 
     def add(self, action_id, starttime):
-        self.report.append(ActionReport(
-            action_id, starttime, process_id=self.id))
+        self.report.append(
+            ActionReport(action_id, starttime, process_id=self.id))
 
     def last(self) -> ActionReport:
         # TODO: Will panic if list has length 0
         return self.report[-1]
 
     def save(self):
-        os.makedirs("report", exist_ok=True)
-        with open(f"report/{int(self.report[0].starttime)}.txt", 'w') as f:
-            f.write(json.dumps(self.to_dict(), indent=2))
-
-    def send(self):
-        for report in self.report:
-            self.kafka.send(report.to_dict())
+        if self.kafka is None:
+            os.makedirs("report", exist_ok=True)
+            with open(f"report/{int(self.report[0].starttime)}.txt", 'w') as f:
+                f.write(json.dumps(self.to_dict(), indent=2))
+        else:
+            for report in self.report:
+                self.kafka.send(report.to_dict())
 
     def clear(self):
         self.id = gen_random_id()

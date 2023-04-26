@@ -27,9 +27,6 @@ END_ACTION_LABEL = 10
 EDGE_NOT_EXIST = 0.01
 MIN_TRANS_PROB = 0.01
 DEFAULT_CONF = 0.5
-G = nx.from_pandas_edgelist(pd.read_csv('data/trans.txt', sep=' '), # type: ignore
-                            source='from', target='to', edge_attr='prob',
-                            create_using=nx.DiGraph())
 
 
 class Bucket:
@@ -85,16 +82,21 @@ class Bucket:
 
 
 class TransitionGraph:
-    def __init__(self):
+    def __init__(self, hardcode_graph, save_report_as_files=False):
         self.current_state = NO_ACTION_LABEL
-        self.report = AssemblyReport()
+        self.report = AssemblyReport(save_as_file=save_report_as_files)
+
+        path = 'data/trans-gt.txt' if hardcode_graph else 'data/trans.txt'
+        self.G = nx.from_pandas_edgelist(pd.read_csv(path, sep=' '),  # type: ignore
+                                         source='from', target='to', edge_attr='prob',
+                                         create_using=nx.DiGraph())
 
     def update_state(self, new_state, confidence):
         if self.current_state == new_state:
             return
 
-        trans_prob = G.get_edge_data(self.current_state, new_state,
-                                     {'prob': EDGE_NOT_EXIST})['prob']
+        trans_prob = self.G.get_edge_data(self.current_state, new_state,
+                                          {'prob': EDGE_NOT_EXIST})['prob']
         trans_prob *= confidence
         current_time = time()
         state_and_label = f"[{new_state}] {ACTIONS[new_state]}"
