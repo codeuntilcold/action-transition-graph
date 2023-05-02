@@ -45,7 +45,7 @@ class GraphConnector:
 
     def send(self, message):
         self.clientsocket.send(message.encode('ascii'))
-    
+
     def close(self):
         self.clientsocket.close()
 

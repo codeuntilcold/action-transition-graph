@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import random
 from kafka_connector import KafkaConnector
+import uuid
 
 
 class ActionReport:
@@ -28,16 +29,17 @@ class ActionReport:
             "worker_id": self.worker_id,
             "process_id": self.process_id,
             "action_id": self.action_id,
-            "starttime": self.starttime,
-            "starttime_human": datetime.fromtimestamp(self.starttime)
-                                       .strftime('%Y-%m-%d %H:%M:%S'),
+            "start_time_ms": self.starttime,
+            "start_time": datetime.fromtimestamp(self.starttime)
+                                  .strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
             "duration": self.duration,
             "is_mistake": self.is_mistake
         }
 
 
 def gen_random_id():
-    return '-'.join([str(random.randrange(1000, 9999)) for _ in range(3)])
+    # return '-'.join([str(random.randint(1000, 9999)) for _ in range(3)])
+    return str(uuid.uuid4())
 
 
 class AssemblyReport:
