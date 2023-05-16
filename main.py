@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO,
 
 def main():
     connector = ModelConnector()
-    bucket = Bucket(stream=connector.get_stream_gen(), radius=5)
+    bucket = Bucket(stream=connector.get_stream_gen(), radius=15)
     bone = TransitionGraph()
 
     while True:
