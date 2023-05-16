@@ -1,5 +1,5 @@
 import logging
-from graph import Bucket, TransitionGraph
+from graph import NO_ACTION_LABEL, Bucket, TransitionGraph
 from connector import ModelConnector, ClientDisconnected
 import argparse
 
@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--savefile", default=False)
 parser.add_argument("-p", "--port", default=24000)
 parser.add_argument("-r", "--smoothradius", default=5)
-parser.add_argument("-h", "--hardgraph", default=False)
+parser.add_argument("-H", "--hardgraph", default=False)
 args = parser.parse_args()
 
 
@@ -27,6 +27,8 @@ def main():
             bone.update_state(new_state, prev_conf)
         except ClientDisconnected:
             logging.warning("Reset state")
+            # Save whatever we have
+            bone.update_state(NO_ACTION_LABEL, 0.0)
             bone.reset_state()
             bucket.flush()
             continue

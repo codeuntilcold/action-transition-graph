@@ -57,6 +57,8 @@ class AssemblyReport:
         return self.report[-1]
 
     def save(self):
+        if len(self.report) == 0:
+            return
         if self.kafka is None:
             os.makedirs("report", exist_ok=True)
             with open(f"report/{int(self.report[0].starttime)}.txt", 'w') as f:
