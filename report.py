@@ -29,10 +29,9 @@ class ActionReport:
             "worker_id": self.worker_id,
             "process_id": self.process_id,
             "action_id": self.action_id,
-            "start_time_ms": self.starttime,
             "start_time": datetime.fromtimestamp(self.starttime)
                                   .strftime("%Y-%m-%dT%H:%M:%S.%f%z"),
-            "duration": self.duration,
+            "duration": round(self.duration, 2),
             "is_mistake": self.is_mistake
         }
 

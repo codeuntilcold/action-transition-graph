@@ -6,9 +6,9 @@ import os
 
 class KafkaConnector:
     def __init__(self, topic='worker-0'):
-        load_dotenv()
-        kafka_bootstrap_servers = os.getenv('KAFKA_BOOTSTRAP_SERVERS')
-        self.topic = topic
+        # load_dotenv()
+        kafka_bootstrap_servers = 'localhost:29092'
+        self.topic = 'workplace_1'
         self.producer = \
             KafkaProducer(bootstrap_servers=[kafka_bootstrap_servers],
                           value_serializer=lambda m: json.dumps(m).encode('ascii'),

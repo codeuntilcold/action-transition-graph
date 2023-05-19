@@ -101,11 +101,14 @@ class TransitionGraph:
         current_time = time()
         state_and_label = f"[{new_state}] {ACTIONS[new_state]}"
 
-        # Only accepts 0 as the starting state
-        if self.current_state == NO_ACTION_LABEL and new_state == 0:
-            logging.info(f"Start action: {state_and_label}")
-            # TODO: How to determine whether this is a mistake
-            self.report.add(new_state, current_time)
+        if self.current_state == NO_ACTION_LABEL:
+            # Only accepts 0 as the starting state
+            if new_state == 0:
+                logging.info(f"Start action: {state_and_label}")
+                # TODO: How to determine whether this is a mistake
+                self.report.add(new_state, current_time)
+            else:
+                return
 
         elif new_state == NO_ACTION_LABEL:
             logging.info("Stop action")
