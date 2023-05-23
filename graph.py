@@ -4,7 +4,7 @@ from time import time
 import networkx as nx
 import logging
 
-from report import AssemblyReport
+from .report import AssemblyReport
 
 RED = '\033[0;31m'
 NC = '\033[0m'
@@ -90,6 +90,7 @@ class TransitionGraph:
         self.report = AssemblyReport(save_as_file=save_report_as_files)
 
         path = 'data/trans-gt.txt' if hardcode_graph else 'data/trans.txt'
+        path = __file__.replace('graph.py', 'data\\trans.txt')
         self.G = nx.from_pandas_edgelist(pd.read_csv(path, sep=' '),  # type: ignore
                                          source='from', target='to', edge_attr='prob',
                                          create_using=nx.DiGraph())

@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 import random
-from kafka_connector import KafkaConnector
+from .kafka_connector import KafkaConnector
 import uuid
 
 
