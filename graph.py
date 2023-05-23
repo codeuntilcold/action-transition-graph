@@ -38,9 +38,12 @@ class Bucket:
         self.bucket = list([NO_ACTION_LABEL] * (2 * radius + 1))
         self.conf = list([DEFAULT_CONF] * (2 * radius + 1))
 
-    def fill(self):
+    def fill(self, new_data=None):
         try:
-            ok, data = next(self.stream)
+            if new_data is None:
+                ok, data = next(self.stream)
+            else:
+                ok, data = True, new_data
             if not ok:
                 raise data
             new_state, confidence = data.split()
@@ -69,9 +72,9 @@ class Bucket:
     def get_conf(self):
         return self.conf[self.radius]
 
-    def drip(self):
+    def drip(self, new_data=None):
         try:
-            self.fill()
+            self.fill(new_data)
             return self.get_mode(), self.get_prev_conf(), self.get_conf()
         except Exception as e:
             raise e
@@ -91,9 +94,9 @@ class TransitionGraph:
                                          source='from', target='to', edge_attr='prob',
                                          create_using=nx.DiGraph())
 
-    def update_state(self, new_state, confidence):
+    def update_state(self, new_state: int, confidence):
         if self.current_state == new_state:
-            return
+            return self.current_state
 
         trans_prob = self.G.get_edge_data(self.current_state, new_state,
                                           {'prob': EDGE_NOT_EXIST})['prob']
@@ -102,13 +105,9 @@ class TransitionGraph:
         state_and_label = f"[{new_state}] {ACTIONS[new_state]}"
 
         if self.current_state == NO_ACTION_LABEL:
-            # Only accepts 0 as the starting state
-            if new_state == 0:
-                logging.info(f"Start action: {state_and_label}")
-                # TODO: How to determine whether this is a mistake
-                self.report.add(new_state, current_time)
-            else:
-                return
+            logging.info(f"Start action: {state_and_label}")
+            # TODO: How to determine whether this is a mistake
+            self.report.add(new_state, current_time)
 
         elif new_state == NO_ACTION_LABEL:
             logging.info("Stop action")
@@ -120,17 +119,16 @@ class TransitionGraph:
         elif trans_prob > MIN_TRANS_PROB:
             logging.info(f"({trans_prob:3f})\t{state_and_label}")
             self.report.last().set_endtime(current_time)
-            # TODO: End time and start time collide
             self.report.add(new_state, current_time)
 
         else:
             logging.info(f"{RED}({trans_prob:3f})\t{state_and_label}{NC}")
             self.report.last().set_endtime(current_time)
-            # TODO: End time and start time collide
             self.report.add(new_state, current_time)
             self.report.last().toggle_mistake()
 
         self.current_state = new_state
+        return self.current_state
 
     def reset_state(self):
         self.current_state = NO_ACTION_LABEL
