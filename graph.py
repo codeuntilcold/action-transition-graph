@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import pandas as pd
 import statistics
 from time import time
@@ -84,6 +85,13 @@ class Bucket:
         self.conf = [DEFAULT_CONF for _ in self.conf]
 
 
+@dataclass
+class StateResult:
+    state: int
+    has_changed: bool
+    is_mistake: bool
+
+
 class TransitionGraph:
     def __init__(self, hardcode_graph, save_report_as_files=False):
         self.current_state = NO_ACTION_LABEL
@@ -97,7 +105,7 @@ class TransitionGraph:
 
     def update_state(self, new_state: int, confidence):
         if self.current_state == new_state:
-            return self.current_state
+            return StateResult(self.current_state, False, False)
 
         trans_prob = self.G.get_edge_data(self.current_state, new_state,
                                           {'prob': EDGE_NOT_EXIST})['prob']
@@ -109,27 +117,35 @@ class TransitionGraph:
             logging.info(f"Start action: {state_and_label}")
             # TODO: How to determine whether this is a mistake
             self.report.add(new_state, current_time)
+            self.current_state = new_state
+            return StateResult(self.current_state, True, False)
 
         elif new_state == NO_ACTION_LABEL:
-            logging.info("Stop action")
             self.report.last().set_endtime(current_time)
             if self.current_state == END_ACTION_LABEL:
-                self.report.save()
-                self.report.clear()
+                logging.info("Stop action")
+                self.reset_state()
+                return StateResult(self.current_state, True, False)
+            else:
+                return StateResult(self.current_state, False, False)
 
         elif trans_prob > MIN_TRANS_PROB:
             logging.info(f"({trans_prob:3f})\t{state_and_label}")
+
             self.report.last().set_endtime(current_time)
             self.report.add(new_state, current_time)
+            self.current_state = new_state
+            return StateResult(self.current_state, True, False)
 
         else:
             logging.info(f"{RED}({trans_prob:3f})\t{state_and_label}{NC}")
+
             self.report.last().set_endtime(current_time)
             self.report.add(new_state, current_time)
             self.report.last().toggle_mistake()
+            self.current_state = new_state
+            return StateResult(self.current_state, True, True)
 
-        self.current_state = new_state
-        return self.current_state
 
     def reset_state(self):
         self.current_state = NO_ACTION_LABEL
