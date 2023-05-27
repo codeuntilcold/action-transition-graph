@@ -116,9 +116,12 @@ class TransitionGraph:
         if self.current_state == NO_ACTION_LABEL:
             logging.info(f"Start action: {state_and_label}")
             # TODO: How to determine whether this is a mistake
-            self.report.add(new_state, current_time)
-            self.current_state = new_state
-            return StateResult(self.current_state, True, False)
+            if new_state == 10:
+                return StateResult(self.current_state, False, False)
+            else:
+                self.report.add(new_state, current_time)
+                self.current_state = new_state
+                return StateResult(self.current_state, True, False)
 
         elif new_state == NO_ACTION_LABEL:
             self.report.last().set_endtime(current_time)

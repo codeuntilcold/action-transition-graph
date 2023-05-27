@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 import random
-from .kafka_connector import KafkaConnector
+# from .kafka_connector import KafkaConnector
 import uuid
 
 
@@ -45,7 +45,7 @@ class AssemblyReport:
     def __init__(self, topic='worker-0', save_as_file=True):
         self.id = gen_random_id()
         self.report: list[ActionReport] = list()
-        self.kafka = None if save_as_file else KafkaConnector(topic)
+        self.kafka = None # if save_as_file else KafkaConnector(topic)
 
     def add(self, action_id, starttime):
         self.report.append(
